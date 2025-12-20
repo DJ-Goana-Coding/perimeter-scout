@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "rules": [
+    {
+      "name": "Critical posture - notify only",
+      "when": { "posture": "CRITICAL" },
+      "actions": [
+        {
+          "type": "NOTIFY",
+          "channel": "ops_panel",
+          "message": "CRITICAL posture: immediate operator review required."
+        }
+      ]
+    },
+    {
+      "name": "Danger posture - recommend downgrade",
+      "when": { "posture": "DANGER" },
+      "actions": [
+        {
+          "type": "RECOMMEND",
+          "target": "admiral",
+          "message": "Environment unstable. Consider manual mode downgrade."
+        }
+      ]
+    }
+  ]
+}
