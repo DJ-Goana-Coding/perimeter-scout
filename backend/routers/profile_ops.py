@@ -1,15 +1,24 @@
-from fastapi import APIRouter
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, field_validator
 import json
 import os
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
-PROFILE_PATH = "data/user_profile.json"
+PROFILE_PATH = os.path.join("data", "user_profile.json")
 
 
 class UserProfile(BaseModel):
     username: str
+    
+    @field_validator('username')
+    @classmethod
+    def validate_username(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Username cannot be empty')
+        if len(v) > 50:
+            raise ValueError('Username cannot exceed 50 characters')
+        return v.strip()
 
 
 def load_profile():
@@ -18,7 +27,7 @@ def load_profile():
         try:
             with open(PROFILE_PATH, "r") as f:
                 return json.load(f)
-        except:
+        except (json.JSONDecodeError, FileNotFoundError):
             pass
     return {"username": "Operator"}
 
