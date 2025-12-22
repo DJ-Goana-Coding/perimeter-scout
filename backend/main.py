@@ -4,7 +4,7 @@ from .core.event_bus import EventBus
 from .services.perimeter_scout.core import AegisCore
 from .services.admiral.admiral_engine import AdmiralEngine
 from .services.admirai.orchestrator import Admirai
-from .routers import security_ops, modules_ops, admin_ops
+from .routers import security_ops, modules_ops, admin_ops, profile_ops
 
 app = FastAPI(title="Pioneer Ecosystem")
 
@@ -40,3 +40,4 @@ async def startup():
 app.include_router(security_ops.router, prefix="/api/v1")
 app.include_router(modules_ops.router, prefix="/api/v1")
 app.include_router(admin_ops.router, prefix="/api/v1")
+app.include_router(profile_ops.router, prefix="/api/v1")
