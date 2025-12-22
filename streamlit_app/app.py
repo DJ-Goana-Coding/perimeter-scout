@@ -19,6 +19,12 @@ def api_post(path: str):
     return resp.json()
 
 
+def api_put(path: str, data: dict):
+    resp = requests.put(API_BASE + path, json=data)
+    resp.raise_for_status()
+    return resp.json()
+
+
 def render_admiral_deck():
     st.title("⚓ Admiral — Trading Engine")
     st.write("Trading engine status placeholder.")
@@ -33,7 +39,7 @@ def render_perimeter_scout_deck():
         mode = st.radio("Intel Mode", ["Sample", "Deep"], horizontal=True)
     with col2:
         if st.button("Refresh Intel"):
-            st.experimental_rerun()
+            st.rerun()
 
     endpoint = "/security/intel?mode=sample" if mode == "Sample" else "/security/intel"
     try:
@@ -130,6 +136,32 @@ def render_future_modules_deck():
 
 def main():
     st.sidebar.title("Pioneer Ecosystem")
+    
+    # User Profile Section
+    st.sidebar.markdown("---")
+    try:
+        profile = api_get("/profile/")
+        username = profile.get("username", "Operator")
+        
+        with st.sidebar.expander("👤 Profile"):
+            st.write(f"**Current Username:** {username}")
+            new_username = st.text_input("Change Username", value=username, key="username_input")
+            if st.button("Update Username"):
+                if new_username and new_username != username:
+                    try:
+                        api_put("/profile/username", {"username": new_username})
+                        st.success(f"Username updated to: {new_username}")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed to update username: {e}")
+                elif not new_username:
+                    st.warning("Username cannot be empty")
+                else:
+                    st.info("Username unchanged")
+    except Exception as e:
+        st.sidebar.error(f"Profile unavailable: {e}")
+    
+    st.sidebar.markdown("---")
     module = st.sidebar.radio(
         "Active Module",
         ["Admiral (Trading)", "Perimeter Scout (Security)", "TIA (Intel)", "Future Modules"],
