@@ -166,4 +166,7 @@ class AegisMonitor:
         ]
 
 # Global monitor instance
+# Note: In production deployments with multiple instances, consider using
+# a distributed cache (Redis) or database for shared state management.
+# For single-instance deployments, this global instance is sufficient.
 aegis_monitor = AegisMonitor()

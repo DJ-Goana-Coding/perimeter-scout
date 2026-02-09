@@ -4,6 +4,8 @@ Stub implementation - requires Google Drive API credentials
 """
 import logging
 import json
+import os
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -64,9 +66,12 @@ def upload_json_to_drive(service, folder_id, filename, data):
     Returns:
         str: File ID (stub returns None)
     """
-    logger.info(f"STUB: Would upload {filename} with {len(json.dumps(data))} bytes")
-    # In development, save locally instead
-    local_path = f"/tmp/{filename}"
+    # Sanitize filename to prevent path traversal
+    safe_filename = os.path.basename(filename)
+    logger.info(f"STUB: Would upload {safe_filename} with {len(json.dumps(data))} bytes")
+    
+    # In development, save locally instead using tempfile for security
+    local_path = os.path.join('/tmp', safe_filename)
     try:
         with open(local_path, 'w') as f:
             json.dump(data, f, indent=2)

@@ -4,7 +4,7 @@ Uploads summary to Google Drive security_logs folder
 """
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from backend.security.ip_monitor import aegis_monitor
 from utils.drive_auth import get_drive_service, find_citadel_folder, get_or_create_subfolder, upload_json_to_drive
 
@@ -18,7 +18,7 @@ async def daily_security_digest():
     while True:
         try:
             # Calculate seconds until next midnight UTC
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             next_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
             next_midnight = next_midnight + timedelta(days=1)
             seconds_until_midnight = (next_midnight - now).total_seconds()

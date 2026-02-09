@@ -5,6 +5,7 @@ from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 import os
 import logging
+import secrets
 
 from backend.security.ip_monitor import aegis_monitor
 
@@ -34,7 +35,13 @@ async def aegis_auth_middleware(request: Request, call_next):
         token = request.headers.get('Authorization')
         expected_token = os.getenv('AEGIS_COMMANDER_TOKEN')
         
-        if not token or token.replace('Bearer ', '') != expected_token:
+        # Use constant-time comparison to prevent timing attacks
+        token_valid = False
+        if token and expected_token:
+            provided_token = token.replace('Bearer ', '')
+            token_valid = secrets.compare_digest(provided_token, expected_token)
+        
+        if not token_valid:
             # Record auth failure
             aegis_monitor.record_auth_failure(client_ip, failure_type="invalid_token")
             

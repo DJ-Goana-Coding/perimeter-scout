@@ -44,7 +44,7 @@ async def startup():
     
     # Start daily security digest task
     from tasks.security_digest import daily_security_digest
-    asyncio.create_task(daily_security_digest())
+    app.state.security_digest_task = asyncio.create_task(daily_security_digest())
     print("✅ Aegis Security Digest Task Started")
 
 
@@ -57,7 +57,7 @@ app.include_router(admin_ops.router, prefix="/api/v1")
 async def security_health():
     """
     Get current Aegis security status.
-    Requires AEGIS_COMMANDER_TOKEN.
+    Public endpoint - no authentication required.
     """
     summary = aegis_monitor.get_daily_summary()
     
