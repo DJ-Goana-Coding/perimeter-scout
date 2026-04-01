@@ -13,9 +13,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the current directory contents into the container at /app
 COPY . .
 
-# Make port 8000 and 8501 available to the world outside this container
+# Make start script executable
+RUN chmod +x start.sh
+
+# Make port 7860 available (Hugging Face Spaces) and 8000/8501 for local use
+EXPOSE 7860
 EXPOSE 8000
 EXPOSE 8501
 
 # Define environment variable
 ENV PYTHONUNBUFFERED=1
+
+# Default command: start both backend and Streamlit via start.sh
+CMD ["./start.sh"]

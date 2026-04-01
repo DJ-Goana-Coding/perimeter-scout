@@ -30,7 +30,7 @@ async def aegis_auth_middleware(request: Request, call_next):
         )
     
     # Check for protected endpoints
-    if request.url.path.startswith('/api/admin') or request.url.path.startswith('/api/trade'):
+    if request.url.path.startswith('/api/v1/admin') or request.url.path.startswith('/api/v1/trade'):
         # Verify AEGIS_COMMANDER_TOKEN
         token = request.headers.get('Authorization')
         expected_token = os.getenv('AEGIS_COMMANDER_TOKEN')

@@ -5,7 +5,7 @@ from .core.event_bus import EventBus
 from .services.perimeter_scout.core import AegisCore
 from .services.admiral.admiral_engine import AdmiralEngine
 from .services.admirai.orchestrator import Admirai
-from .routers import security_ops, modules_ops, admin_ops
+from .routers import security_ops, modules_ops, admin_ops, inventory_ops
 from .middleware.aegis_middleware import aegis_auth_middleware
 from .security.ip_monitor import aegis_monitor
 
@@ -51,6 +51,7 @@ async def startup():
 app.include_router(security_ops.router, prefix="/api/v1")
 app.include_router(modules_ops.router, prefix="/api/v1")
 app.include_router(admin_ops.router, prefix="/api/v1")
+app.include_router(inventory_ops.router, prefix="/api/v1")
 
 
 @app.get("/health/security")
