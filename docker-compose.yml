@@ -10,6 +10,7 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+      - PIONEER_TRADER_URL=${PIONEER_TRADER_URL:-http://pioneer-trader:8001}
 
   frontend:
     build: .
@@ -20,5 +21,6 @@ services:
       - "8501:8501"
     environment:
       - API_BASE_URL=http://backend:8000/api/v1
+      - PIONEER_TRADER_URL=${PIONEER_TRADER_URL:-http://pioneer-trader:8001}
     depends_on:
       - backend

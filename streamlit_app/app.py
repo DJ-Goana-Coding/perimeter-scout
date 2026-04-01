@@ -79,6 +79,61 @@ def render_tia_deck():
     st.write("Future: display TIA summaries here.")
     # When TIA is wired, call its API or registry-based methods
 
+def render_mapping_inventory_deck():
+    st.title("🗺️ Mapping & Inventory — Pioneer Trader Fleet")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Refresh Fleet Status"):
+            st.rerun()
+
+    st.subheader("Fleet Inventory")
+    try:
+        fleet = api_get("/inventory/fleet")
+        if fleet.get("status") in ("UNREACHABLE", "TIMEOUT", "ERROR"):
+            st.warning(f"Pioneer Trader unavailable: {fleet.get('error')}")
+        else:
+            vortex = fleet.get("vortex", {})
+            tia = fleet.get("tia", {})
+            admiral = fleet.get("admiral", {})
+
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Active Slots", vortex.get("active_slots", "—"))
+            c2.metric("Total Equity", f"${vortex.get('total_equity', 0):.2f}")
+            c3.metric("Total Profit", f"${vortex.get('total_profit', 0):.2f}")
+
+            with st.expander("T.I.A. Status"):
+                st.json(tia)
+            with st.expander("Admiral Status"):
+                st.json(admiral)
+            with st.expander("Authorization"):
+                st.json(fleet.get("authorization", {}))
+    except Exception as e:
+        st.error(f"Fleet inventory error: {e}")
+
+    st.markdown("---")
+    st.subheader("🧠 T.I.A. Risk Summary")
+    try:
+        summary = api_get("/inventory/tia/summary")
+        if summary.get("status") in ("UNREACHABLE", "TIMEOUT", "ERROR"):
+            st.warning(f"T.I.A. unavailable: {summary.get('error')}")
+        else:
+            st.json(summary)
+    except Exception as e:
+        st.error(f"T.I.A. summary error: {e}")
+
+    st.markdown("---")
+    st.subheader("🔌 Pioneer Trader Connection")
+    try:
+        health = api_get("/inventory/health")
+        if health.get("status") in ("UNREACHABLE", "TIMEOUT", "ERROR"):
+            st.error(f"⚠️ Pioneer Trader not connected: {health.get('error')}")
+        else:
+            st.success("✅ Connected to Pioneer Trader")
+            st.json(health)
+    except Exception as e:
+        st.error(f"Health check error: {e}")
+
 def render_future_modules_deck():
     st.title("🧩 Module Health & Future Agents")
 
@@ -125,7 +180,7 @@ def main():
     st.sidebar.title("Pioneer Ecosystem")
     module = st.sidebar.radio(
         "Active Module",
-        ["Admiral (Trading)", "Perimeter Scout (Security)", "TIA (Intel)", "Future Modules"],
+        ["Admiral (Trading)", "Perimeter Scout (Security)", "TIA (Intel)", "Mapping & Inventory", "Future Modules"],
     )
 
     if module == "Admiral (Trading)":
@@ -134,6 +189,8 @@ def main():
         render_perimeter_scout_deck()
     elif module == "TIA (Intel)":
         render_tia_deck()
+    elif module == "Mapping & Inventory":
+        render_mapping_inventory_deck()
     else:
         render_future_modules_deck()
 
