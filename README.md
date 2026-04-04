@@ -68,6 +68,14 @@ The app runs as a Docker container on port **7860**.
 
 ### Quick Deploy to Hugging Face Spaces
 
+**Option 1: Using the deployment script (recommended)**
+
+```bash
+./deploy-to-huggingface.sh YOUR_USERNAME SPACE_NAME
+```
+
+**Option 2: Manual deployment**
+
 1. **Create a new Space** at https://huggingface.co/new-space
    - Select **Docker** as the SDK
    - Set the app port to **7860**

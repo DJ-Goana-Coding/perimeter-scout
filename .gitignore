@@ -1,3 +1,22 @@
 data/*
 __pycache__/
 *.pyc
+
+# Temporary files
+*.tmp
+*.txt.txt
+httpsgithub.com*.txt
+
+# Environment files
+.env
+.env.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
