@@ -64,5 +64,37 @@ docker-compose up
 
 ## Hugging Face Spaces Deployment
 
-The app runs as a Docker container on port **7860**.  
-Set the `PIONEER_TRADER_URL` secret in your Space settings to connect to the Pioneer Trader backend.
+The app runs as a Docker container on port **7860**.
+
+### Quick Deploy to Hugging Face Spaces
+
+1. **Create a new Space** at https://huggingface.co/new-space
+   - Select **Docker** as the SDK
+   - Set the app port to **7860**
+
+2. **Push this repository to your Space**:
+   ```bash
+   # Add Hugging Face as a remote (replace YOUR_USERNAME and SPACE_NAME)
+   git remote add huggingface https://huggingface.co/spaces/YOUR_USERNAME/SPACE_NAME
+
+   # Push to Hugging Face
+   git push huggingface main
+   ```
+
+3. **Configure Secrets** in your Space settings:
+   - `PIONEER_TRADER_URL` - URL of the Pioneer Trader mapping-and-inventory backend
+   - `AEGIS_COMMANDER_TOKEN` - (Optional) Authentication token for admin endpoints
+
+4. **Connect to mapping-and-inventory**:
+   - The `PIONEER_TRADER_URL` environment variable connects Perimeter Scout to the Pioneer Trader backend
+   - Default endpoints:
+     - `/api/v1/inventory/fleet` - Fleet inventory
+     - `/api/v1/inventory/health` - Cockpit health
+     - `/api/v1/inventory/tia/summary` - T.I.A. risk summary
+
+### Verifying the Connection
+
+Once deployed, test the mapping-and-inventory connection:
+```bash
+curl https://YOUR_SPACE.hf.space/api/v1/inventory/health
+```
