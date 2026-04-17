@@ -1,0 +1,146 @@
+# ------------------------------------------------------------------------------
+# Hugging Face Space sync — one-way deployment diode
+#
+# Purpose
+#   Mirror the `main` branch of this GitHub repository to the Hugging Face
+#   Space that hosts Perimeter Scout (see README.md → "Hugging Face Spaces
+#   Deployment"). The Space runs the repo as a Docker container on port 7860.
+#
+# What is pushed
+#   The entire working tree of this repository at the commit that triggered
+#   the workflow — i.e. exactly what `actions/checkout` produces, minus the
+#   `.git` directory of this repo. A fresh Space repo is cloned and all of its
+#   tracked content is replaced with the contents of this repo, then committed
+#   and force-pushed to the Space's `main` branch.
+#
+#   Nothing else is transmitted:
+#     - No environment variables, no GitHub secrets other than HF_TOKEN (used
+#       only as a Git HTTP Basic auth password to push to huggingface.co).
+#     - No artifacts from other workflows.
+#     - No data from outside this repository.
+#
+# Direction
+#   One-way: GitHub `main`  ──►  Hugging Face Space `main`
+#   The Space is treated as a deployment target only; its history is
+#   overwritten on every sync (force-push). Do not commit to the Space
+#   directly — those commits will be discarded on the next sync.
+#
+# Security posture
+#   - Trigger is restricted to pushes on `main` and manual `workflow_dispatch`.
+#     Pull-request events cannot run this workflow, so forks cannot trigger
+#     a deploy.
+#   - `permissions: contents: read` — the workflow has no write access to
+#     this GitHub repository.
+#   - `HF_TOKEN` is consumed only by `git` via an HTTP Basic auth header
+#     stored in `.git/config` of the *Space* clone (never this repo). It is
+#     not exported to the shell environment of any step that runs repo code,
+#     is not printed, and is not passed to any third-party action.
+#   - Only first-party actions pinned by major version are used
+#     (`actions/checkout@v4`).
+#   - A `concurrency` group serializes syncs so overlapping pushes cannot
+#     race and produce an inconsistent Space state.
+#
+# Configuration
+#   Required secret:
+#     HF_TOKEN        Hugging Face access token with write scope on the
+#                     target Space. Create at https://huggingface.co/settings/tokens
+#
+#   Optional repository variables (Settings → Secrets and variables → Actions → Variables):
+#     HF_USERNAME     Hugging Face user or org that owns the Space.
+#                     Default: "DJ-Goana-Coding"
+#     HF_SPACE_NAME   Name of the Space repository on Hugging Face.
+#                     Default: "perimeter-scout"
+#
+#   The target Space URL is therefore:
+#     https://huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE_NAME}
+# ------------------------------------------------------------------------------
+
+name: Sync to Hugging Face Space
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hf-space-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Mirror main → Hugging Face Space
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      HF_USERNAME: ${{ vars.HF_USERNAME || 'DJ-Goana-Coding' }}
+      HF_SPACE_NAME: ${{ vars.HF_SPACE_NAME || 'perimeter-scout' }}
+
+    steps:
+      - name: Check out source repository (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify HF_TOKEN is configured
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "${HF_TOKEN}" ]; then
+            echo "::error::HF_TOKEN secret is not set. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "HF_TOKEN is configured (length only): ${#HF_TOKEN} chars"
+
+      - name: Push repository contents to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          SRC_DIR="${GITHUB_WORKSPACE}"
+          SPACE_DIR="$(mktemp -d)"
+          SPACE_URL="https://huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE_NAME}"
+
+          echo "Source commit:   ${GITHUB_SHA}"
+          echo "Target Space:    ${SPACE_URL}"
+
+          # Clone the Space repo using HF_TOKEN via a short-lived HTTP Basic
+          # auth header. The header is stored only inside the Space clone's
+          # .git/config; it is never written to this repo or to logs.
+          AUTH_HEADER="Authorization: Basic $(printf 'user:%s' "${HF_TOKEN}" | base64 -w0)"
+
+          git -c "http.extraHeader=${AUTH_HEADER}" \
+              clone --depth=1 "${SPACE_URL}" "${SPACE_DIR}"
+
+          cd "${SPACE_DIR}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Replace the Space's tracked content with the contents of this repo
+          # at the triggering commit. We remove everything currently tracked
+          # (so deletions in this repo propagate) except the Space's .git dir,
+          # then copy the repo tree in.
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          # Copy the source tree (excluding this repo's .git so we don't
+          # clobber the Space repo's git metadata).
+          (cd "${SRC_DIR}" && tar --exclude='./.git' -cf - .) | tar -xf -
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to sync — Space is already at ${GITHUB_SHA}."
+            exit 0
+          fi
+
+          git commit -m "Sync from GitHub ${GITHUB_REPOSITORY}@${GITHUB_SHA}"
+
+          # Force-push: the Space is a deployment target, not a source of truth.
+          git -c "http.extraHeader=${AUTH_HEADER}" push --force origin HEAD:main
+
+          echo "Sync complete."
