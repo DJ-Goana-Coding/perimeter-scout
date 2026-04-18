@@ -4,7 +4,7 @@ emoji: 🛡️
 colorFrom: blue
 colorTo: green
 sdk: docker
-app_port: 7860
+app_port: 8000
 ---
 
 # 🛡️ Perimeter Scout — Aegis Security Core
@@ -64,5 +64,6 @@ docker-compose up
 
 ## Hugging Face Spaces Deployment
 
-The app runs as a Docker container on port **7860**.  
+The app runs as a Docker container on port **8000** (matches the local
+`backend/` standard and `docker-compose.yml`).
 Set the `PIONEER_TRADER_URL` secret in your Space settings to connect to the Pioneer Trader backend.

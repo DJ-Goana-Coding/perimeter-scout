@@ -16,9 +16,10 @@ COPY . .
 # Make start script executable
 RUN chmod +x start.sh
 
-# Make port 7860 available (Hugging Face Spaces) and 8000/8501 for local use
-EXPOSE 7860
+# Make port 8000 available (default — matches HF Space manifest and
+# docker-compose). 7860 and 8501 are kept for legacy / Streamlit use.
 EXPOSE 8000
+EXPOSE 7860
 EXPOSE 8501
 
 # Define environment variable

@@ -1,11 +1,13 @@
 #!/bin/bash
 # Startup script for Hugging Face Spaces and production deployments.
-# Runs the FastAPI backend on PORT (default 7860).
+# Runs the FastAPI backend on PORT (default 8000, matching the backend
+# standard declared in docker-compose.yml and the HF Space manifest in
+# README.md).
 # The Streamlit frontend is optional — set STREAMLIT=1 to enable it.
 
 set -e
 
-export PORT=${PORT:-7860}
+export PORT=${PORT:-8000}
 export API_BASE_URL=${API_BASE_URL:-http://localhost:${PORT}/api/v1}
 
 echo "🛡️ Starting Perimeter Scout backend on port ${PORT}..."
