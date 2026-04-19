@@ -2,12 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import asyncio
+import os
 from .core.module_registry import ModuleRegistry
 from .core.event_bus import EventBus
 from .services.perimeter_scout.core import AegisCore
 from .services.admiral.admiral_engine import AdmiralEngine
 from .services.admirai.orchestrator import Admirai
-from .routers import security_ops, modules_ops, admin_ops, inventory_ops
+from .routers import security_ops, modules_ops, admin_ops, inventory_ops, system_ops
 from .middleware.aegis_middleware import aegis_auth_middleware
 from .security.ip_monitor import aegis_monitor
 
@@ -15,10 +16,22 @@ app = FastAPI(title="Pioneer Ecosystem")
 
 # CORS: explicit allowlist for the Citadel Nexus Faceplate (Vercel HUD).
 # This is the only authorized production browser origin permitted to call
-# the Aegis API. Add additional origins here only with explicit approval.
-ALLOWED_ORIGINS = [
+# the Aegis API. Additional origins can be appended via the
+# ``ALLOWED_ORIGINS`` environment variable (comma-separated) — used for
+# local dev (e.g. ``http://localhost:3000``) and for sibling Citadel HUDs.
+# Localhost is included by default so the dashboard and HUD work out of
+# the box during development without requiring ops to set the env var.
+_DEFAULT_ALLOWED_ORIGINS = [
     "https://citadel-nexus-private.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:8501",
 ]
+_extra_origins = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if o.strip()
+]
+ALLOWED_ORIGINS = list(dict.fromkeys(_DEFAULT_ALLOWED_ORIGINS + _extra_origins))
 
 app.add_middleware(
     CORSMiddleware,
@@ -69,6 +82,11 @@ app.include_router(security_ops.router, prefix="/api/v1")
 app.include_router(modules_ops.router, prefix="/api/v1")
 app.include_router(admin_ops.router, prefix="/api/v1")
 app.include_router(inventory_ops.router, prefix="/api/v1")
+# system_ops is mounted at the root because it declares its own absolute
+# paths (`/v1/system/status` and `/api/v1/system/status`) so that the
+# Phase 2.2 cross-node telemetry contract resolves identically across every
+# repo regardless of router prefixing.
+app.include_router(system_ops.router)
 
 
 @app.get("/health/security")
