@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 from .core.module_registry import ModuleRegistry
 from .core.event_bus import EventBus
@@ -10,6 +11,21 @@ from .middleware.aegis_middleware import aegis_auth_middleware
 from .security.ip_monitor import aegis_monitor
 
 app = FastAPI(title="Pioneer Ecosystem")
+
+# CORS: explicit allowlist for the Citadel Nexus Faceplate (Vercel HUD).
+# This is the only authorized production browser origin permitted to call
+# the Aegis API. Add additional origins here only with explicit approval.
+ALLOWED_ORIGINS = [
+    "https://citadel-nexus-private.vercel.app",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 # Add Aegis middleware
 app.middleware("http")(aegis_auth_middleware)
@@ -69,4 +85,42 @@ async def security_health():
         "today_events": summary['total_events'],
         "today_bans": summary['auto_bans']
     }
+
+
+@app.get("/health/live")
+async def health_live():
+    """
+    Liveness probe. Returns 200 as long as the process is running and the
+    event loop can serve a request. Used by the Vercel HUD and container
+    orchestrators to detect a hung process.
+    """
+    return {"status": "alive"}
+
+
+@app.get("/health/ready")
+async def health_ready():
+    """
+    Readiness probe. Returns 200 once core subsystems (module registry,
+    event bus, Aegis core) have been initialized by the startup handler.
+    Returns 503 while the app is still starting up.
+    """
+    registry = getattr(app.state, "registry", None)
+    event_bus = getattr(app.state, "event_bus", None)
+    aegis = getattr(app.state, "aegis", None)
+
+    components = {
+        "registry": registry is not None,
+        "event_bus": event_bus is not None,
+        "aegis": aegis is not None,
+    }
+    ready = all(components.values())
+
+    if not ready:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=503,
+            content={"status": "starting", "components": components},
+        )
+
+    return {"status": "ready", "components": components}
 
