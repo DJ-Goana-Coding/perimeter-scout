@@ -92,16 +92,20 @@ jobs:
           persist-credentials: false
 
       - name: Verify HF_TOKEN is configured
+        id: token_check
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           if [ -z "${HF_TOKEN}" ]; then
-            echo "::error::HF_TOKEN secret is not set. Add it under Settings → Secrets and variables → Actions."
-            exit 1
+            echo "::warning::HF_TOKEN secret is not set. Skipping Hugging Face sync. Add it under Settings → Secrets and variables → Actions to enable deployment."
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            exit 0
           fi
           echo "HF_TOKEN is configured (length only): ${#HF_TOKEN} chars"
+          echo "skip=false" >> "${GITHUB_OUTPUT}"
 
       - name: Ensure Hugging Face Space exists
+        if: steps.token_check.outputs.skip != 'true'
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
@@ -128,6 +132,7 @@ jobs:
           esac
 
       - name: Push repository contents to Hugging Face Space
+        if: steps.token_check.outputs.skip != 'true'
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |

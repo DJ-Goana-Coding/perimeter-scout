@@ -1,0 +1,16 @@
+{
+  "repo": "perimeter-scout",
+  "generated_at": "2026-04-19T17:25:02Z",
+  "summary": {
+    "files_scanned": 65,
+    "python_files": 49,
+    "syntax_errors": 0,
+    "missing_expected_files": 0,
+    "undocumented_secrets": 0,
+    "stray_files": 0
+  },
+  "syntax_errors": [],
+  "missing_expected_files": [],
+  "undocumented_secrets": [],
+  "stray_files": []
+}

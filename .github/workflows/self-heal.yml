@@ -1,0 +1,113 @@
+# ------------------------------------------------------------------------------
+# Self-healing — Phase 3.3
+#
+# When the Hugging Face sync or the Librarian build fails, retry once and,
+# if it still fails, open (or reuse) a tracking issue tagged
+# `librarian:node-failure` so the central Librarian can see the gap and the
+# operator gets a single actionable thread per node.
+#
+# Trigger: workflow_run completion of the watched workflows. Only acts when
+# the watched run concluded with `failure`.
+# ------------------------------------------------------------------------------
+
+name: Self-Healing
+
+on:
+  workflow_run:
+    workflows:
+      - "Sync to Hugging Face Space"
+      - "Librarian Build"
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+jobs:
+  retry:
+    name: Retry failed run
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt == 1 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Re-run failed jobs once
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          echo "Triggering re-run of failed jobs for run ${RUN_ID}..."
+          curl -sS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/rerun-failed-jobs" \
+            && echo "Re-run requested." \
+            || echo "::warning::Re-run request failed; continuing to issue creation."
+
+  open_issue:
+    name: Open node-failure issue
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt >= 2 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ensure label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Idempotent: 422 means "already exists", which is fine.
+          http_code=$(curl -sS -o /tmp/lbl.json -w '%{http_code}' \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/labels" \
+            -d '{"name":"librarian:node-failure","color":"B60205","description":"Surfaced to the Librarian self-healing loop."}') || true
+          echo "label create HTTP ${http_code}"
+
+      - name: Create or update tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WF_NAME: ${{ github.event.workflow_run.name }}
+          WF_URL: ${{ github.event.workflow_run.html_url }}
+          WF_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          TITLE="[librarian:node-failure] ${WF_NAME} failed after retry"
+          BODY=$(jq -Rn \
+            --arg name "${WF_NAME}" \
+            --arg url  "${WF_URL}" \
+            --arg sha  "${WF_SHA}" \
+            --arg repo "${GITHUB_REPOSITORY}" \
+            '{body: ("Workflow **\($name)** in `\($repo)` failed twice in a row.\n\nFailing run: \($url)\nCommit: `\($sha)`\n\nThe Librarian self-healing loop has flagged this node. The next steps are:\n1. Inspect the failing run logs.\n2. Resolve the underlying issue (missing secret, syntax error, network).\n3. Close this issue once the next run of the workflow is green; the loop will re-open it if the failure recurs.")}')
+
+          # Look for an existing open issue with the same title to avoid spam.
+          existing=$(curl -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "https://api.github.com/search/issues?q=repo:${GITHUB_REPOSITORY}+is:issue+is:open+label:librarian:node-failure+in:title+$(printf %s "${WF_NAME}" | jq -sRr @uri)" \
+            | jq -r '.items[0].number // empty')
+
+          if [ -n "${existing}" ]; then
+            echo "Updating existing issue #${existing}"
+            curl -sS -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${existing}/comments" \
+              -d "${BODY}"
+          else
+            echo "Opening new issue"
+            payload=$(jq -n \
+              --arg title "${TITLE}" \
+              --argjson body_obj "${BODY}" \
+              '{title: $title, body: $body_obj.body, labels: ["librarian:node-failure"]}')
+            curl -sS -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues" \
+              -d "${payload}"
+          fi

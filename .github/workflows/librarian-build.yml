@@ -1,0 +1,60 @@
+# ------------------------------------------------------------------------------
+# Librarian build — regenerate librarian/{MANIFEST.md,rag_corpus.jsonl,gap_report.json}
+#
+# Phase 1.2 / 1.3 of the Universal Alignment Protocol: every push to `main`
+# refreshes the RAG corpus and gap report so the central Mapping & Inventory
+# Librarian always sees the current state of this node.
+#
+# This workflow uses GITHUB_TOKEN (auto-provided to every Actions run) to
+# commit the regenerated artifacts back to the repo. No external secrets
+# are required.
+# ------------------------------------------------------------------------------
+
+name: Librarian Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: librarian-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Regenerate librarian artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Regenerate librarian artifacts
+        run: |
+          python librarian/build_manifest.py
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- librarian/; then
+            echo "No librarian changes to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add librarian/
+          git commit -m "chore(librarian): refresh manifest, rag corpus, gap report"
+          git push origin HEAD:${GITHUB_REF_NAME}
