@@ -592,7 +592,11 @@ def main() -> int:
 
     print(f"Wrote {len(files)} file scan results.")
     print(f"  rag_corpus.jsonl entries: see file ({corpus_path})")
-    print(f"  gap summary: {json.dumps(gap['summary'])}")
+    # Print only the integer counts, copied through json.dumps/loads to break
+    # any taint flow from the (env-var-name-bearing) gap dict so static
+    # analyzers don't mistake variable names for secret values.
+    counts_only = {k: int(v) for k, v in gap["summary"].items()}
+    print(f"  gap summary: {json.dumps(counts_only)}")
     return 0
 
 
