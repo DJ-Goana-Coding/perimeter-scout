@@ -76,8 +76,12 @@ async def _build_status(request: Request) -> Dict[str, Any]:
     if registry is not None:
         try:
             modules = registry.capabilities()
-        except Exception as exc:  # pragma: no cover - defensive
-            modules = {"_error": str(exc)}
+        except Exception:  # pragma: no cover - defensive
+            # Deliberately do not propagate the exception text: this endpoint
+            # is unauthenticated and consumed by external HUDs / crawlers, so
+            # we only surface a generic indicator. Real diagnostics are
+            # available in the application logs.
+            modules = {"_error": "registry_unavailable"}
 
     # Repo version sourced from the Aegis core when available, falling back
     # to a static label so the field is always populated.

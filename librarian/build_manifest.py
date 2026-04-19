@@ -532,6 +532,11 @@ def main() -> int:
     LIBRARIAN_DIR.mkdir(parents=True, exist_ok=True)
 
     # Write gap_report.json
+    # Note: gap["undocumented_secrets"] contains env-variable *names*
+    # (e.g. "AEGIS_COMMANDER_TOKEN") harvested from os.getenv() calls in
+    # source code, not the values of those variables. The Librarian needs
+    # the names surfaced so the operator can document or remove them. No
+    # process environment is read here, so there is no secret to leak.
     (LIBRARIAN_DIR / "gap_report.json").write_text(
         json.dumps(gap, indent=2, sort_keys=False) + "\n", encoding="utf-8"
     )
