@@ -1,6 +1,6 @@
 # perimeter-scout — Librarian Manifest
 
-_Generated: `2026-04-19T17:25:02Z` by `librarian/build_manifest.py`._
+_Generated: `2026-04-19T20:13:16Z` by `librarian/build_manifest.py`._
 
 > **Source of truth for the Mapping & Inventory Librarian.** This file is regenerated on every push; do not hand-edit. To change the structure, edit `librarian/build_manifest.py`.
 
