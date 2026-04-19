@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import asyncio
 from .core.module_registry import ModuleRegistry
 from .core.event_bus import EventBus
@@ -116,7 +117,6 @@ async def health_ready():
     ready = all(components.values())
 
     if not ready:
-        from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=503,
             content={"status": "starting", "components": components},
