@@ -6,12 +6,10 @@ import os
 
 API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000/api/v1")
 
-
 def api_get(path: str):
     resp = requests.get(API_BASE + path)
     resp.raise_for_status()
     return resp.json()
-
 
 def api_post(path: str):
     resp = requests.post(API_BASE + path)
@@ -29,7 +27,6 @@ def render_admiral_deck():
     st.title("⚓ Admiral — Trading Engine")
     st.write("Trading engine status placeholder.")
     # Future: show telemetry and portfolio
-
 
 def render_perimeter_scout_deck():
     st.title("🛡️ Perimeter Scout — Aegis Security Core")
@@ -84,12 +81,10 @@ def render_perimeter_scout_deck():
     except Exception as e:
         st.error(f"Timeline error: {e}")
 
-
 def render_tia_deck():
     st.title("🧠 TIA — Tactical Intelligence Agent")
     st.write("Future: display TIA summaries here.")
     # When TIA is wired, call its API or registry-based methods
-
 
 def render_future_modules_deck():
     st.title("🧩 Module Health & Future Agents")
@@ -133,7 +128,6 @@ def render_future_modules_deck():
         except Exception as e:
             st.error(f"Reload failed: {e}")
 
-
 def main():
     st.sidebar.title("Pioneer Ecosystem")
     
@@ -175,7 +169,6 @@ def main():
         render_tia_deck()
     else:
         render_future_modules_deck()
-
 
 if __name__ == "__main__":
     main()
