@@ -13,9 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the current directory contents into the container at /app
 COPY . .
 
-# Make port 8000 and 8501 available to the world outside this container
-EXPOSE 8000
-EXPOSE 8501
+# Make the Hugging Face Space port available
+EXPOSE 7860
 
 # Define environment variable
 ENV PYTHONUNBUFFERED=1
+ENV API_BASE_URL=http://127.0.0.1:8000/api/v1
+
+CMD ["sh", "-c", "python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 & exec streamlit run streamlit_app/app.py --server.address=0.0.0.0 --server.port=7860"]

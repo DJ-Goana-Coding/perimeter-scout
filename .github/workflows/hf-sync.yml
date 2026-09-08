@@ -1,0 +1,46 @@
+name: Sync Hugging Face Space
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hf-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-space:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync main to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_URL: https://huggingface.co/spaces/DJ-Goanna-Coding/perimeter-scout
+        run: |
+          if [ -z "${HF_TOKEN}" ]; then
+            echo "HF_TOKEN repository secret is required." >&2
+            exit 1
+          fi
+
+          auth_header="$(printf 'oauth2:%s' "${HF_TOKEN}" | base64 | tr -d '\n')"
+
+          # Hugging Face Spaces created from starter templates can have unrelated history.
+          # Force-pushing here intentionally makes this repository's main branch authoritative.
+          git -c http.extraHeader="Authorization: Basic ${auth_header}" \
+            push --force "${HF_SPACE_URL}" HEAD:main
